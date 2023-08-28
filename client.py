@@ -3,12 +3,11 @@ from select import select
 from common import *
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-msg = packed_zero + \
-    packed_zero
+base_addr = ("127.0.0.1", ports[0])
 
-sock.sendto(msg, ("127.0.0.1", udp_ports[0]))
+sock.sendto(struct.pack('!I', 0), base_addr)
 
 while True:
     data, addr = sock.recvfrom(minimum_payload_size)
-    msg = packed_zero + data[:4]
-    sock.sendto(msg, addr)
+    msg = data[:4]
+    sock.sendto(msg + struct.pack('B', ports.index(addr[1])), base_addr)
