@@ -18,4 +18,7 @@ print('client sent handshake to server')
 while True:
     data, addr = sock.recvfrom(minimum_payload_size)
     msg = data[:4]
+    seq_num = struct.unpack('!I', msg)[0]
+    if seq_num == 2**32 - 1:
+        break
     sock.sendto(msg + struct.pack('B', ports.index(addr[1])), base_addr)

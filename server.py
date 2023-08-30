@@ -32,6 +32,7 @@ main_socket = socks[0]
 
 # Just get an estimate of the RTT
 data, addr = socks[0].recvfrom(1500)
+initial_addr = addr
 t1 = time.time()
 ret_msg = struct.pack('!I', 0)
 main_socket.sendto(ret_msg, addr)
@@ -96,7 +97,7 @@ for cycle_num in range(sys.maxsize):
   
   if not all(sent_enough):
     print('Failed to utilize the link. Aborting.')
-    quit(1)
+    break
   # elif num_acked[0] < packets_actually_sent[0]:
   #   print('Had packet loss on the flow sending less. That shouldn\'t happen. Aborting.')
   #   quit(1)
@@ -114,6 +115,8 @@ for cycle_num in range(sys.maxsize):
       else:
         confidence = 1-((loss_ratio-1)*2)
         print(f'Fair queuing NOT detected with a confidence of {round(confidence*100)}')
+      break
   else: 
     rates = [rate*2 for rate in rates]
 
+main_socket.sendto(struct.pack('!I', 2**32 - 1), initial_addr)
