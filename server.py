@@ -106,16 +106,16 @@ for cycle_num in range(sys.maxsize):
     if not already_encountered_loss:
       already_encountered_loss = True
       acked_over_sent = num_acked[1]/packets_actually_sent[1]
-      print('Encountered packet loss')
+      print(f'Encountered packet loss, {acked_over_sent=}')
       rates = [rate*acked_over_sent*2 for rate in rates]
     else:
       loss_ratio = (num_acked[0]/packets_actually_sent[0])/(num_acked[1]/packets_actually_sent[1])
       if loss_ratio >= 1.5:
         confidence = (loss_ratio-1.5)*2
-        print(f'Fair queuing detected with a confidence of {round(confidence*100)}')
+        print(f'Fair queuing detected with a confidence of {round(confidence*100)}%')
       else:
         confidence = 1-((loss_ratio-1)*2)
-        print(f'Fair queuing NOT detected with a confidence of {round(confidence*100)}')
+        print(f'Fair queuing NOT detected with a confidence of {round(confidence*100)}%')
       break
   else: 
     rates = [rate*2 for rate in rates]

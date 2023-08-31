@@ -18,7 +18,8 @@ import atexit
 
 def killall():
     subprocess.run('killall iperf3'.split(' '))
-    subprocess.run('killall picoquic_sample'.split(' '))
+    subprocess.run("ps aux | grep -v grep | grep server\.py | awk '{print $2}' | xargs kill", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+    subprocess.run("ps aux | grep -v grep | grep client\.py | awk '{print $2}' | xargs kill", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 
 atexit.register(killall)
 
@@ -83,14 +84,14 @@ for delay in (50,):
     delay_results.append([])
     results.append([])
     # for rate in (10, 50, 100):
-    for rate in (10,):
+    for rate in (50,):
         bw_results[-1].append([])
         delay_results[-1].append([])
         results[-1].append([])
         rep_counter = 0
         while True:
-            subprocess.run('killall picoquic_sample'.split(' '))
-            subprocess.run('killall iperf3'.split(' '))
+            subprocess.run("ps aux | grep -v grep | grep server\.py | awk '{print $2}' | xargs kill", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+            subprocess.run("ps aux | grep -v grep | grep client\.py | awk '{print $2}' | xargs kill", shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
             if rep_counter >= max_reps:
                 break
             print("delay", delay, "rate", rate, "rep_counter", rep_counter)
@@ -150,8 +151,8 @@ for delay in (50,):
             # print(s1.cmd("ethtool -K s1-eth1 " + offloading_options))
             # print(s1.cmd("ethtool -K s1-eth2 " + offloading_options))
 
-            debug = {}
-            # debug = {"stdout": None, "stderr": None}
+            # debug = {}
+            debug = {"stdout": None, "stderr": None}
 
             # server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w logs/server.pcap (tcp || udp) and ip'.split(' '), **debug)
             client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w logs/client.pcap (tcp || udp) and ip'.split(' '), **debug)
@@ -164,7 +165,7 @@ for delay in (50,):
                 iperf_client_popen = h2.popen(f'iperf3 -c {h1.IP()} --congestion reno -tinf'.split(' '), **{"stdout": None, "stderr": None})
                 time.sleep(4)
 
-            client_popen = h1.popen('python ../client.py'.split(' '), **{"stdout": None, "stderr": None})
+            client_popen = h1.popen('python ../client.py -s 192.168.0.2'.split(' '), **{"stdout": None, "stderr": None})
             client_popen.communicate()
 
             if args.iperf:
