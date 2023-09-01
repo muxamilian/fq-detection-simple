@@ -53,6 +53,8 @@ for sock in socks:
   sock.setblocking(False)
 next_socket = 0
 port_indices = range(len(ports))
+data_buffer = bytearray(recv_packet_len)
+send_buffer = bytearray(minimum_payload_size)
 for cycle_num in range(sys.maxsize):
   seq_nums_beginning = list(seq_nums)
   num_acked = [0] * len(ports) 
@@ -77,9 +79,10 @@ for cycle_num in range(sys.maxsize):
     try:
       while True:
         # data, _ = main_socket.recvfrom(recv_packet_len)
-        data = main_socket.recv(recv_packet_len)
+        # data = main_socket.recv(recv_packet_len)
+        main_socket.recv_into(data_buffer)
         # assert len(data) == recv_packet_len, f'{data}'
-        ack_num, sock_index = struct.unpack(unpack_ack_and_sock_index, data)
+        ack_num, sock_index = struct.unpack(unpack_ack_and_sock_index, data_buffer)
         latest_rtts[sock_index] = current_time - send_times[sock_index][ack_num]
         if ack_num >= seq_nums_beginning[sock_index] and (seq_nums_end is None or ack_num < seq_nums_end[sock_index]):
           if num_acked[sock_index] == 0:
@@ -106,9 +109,9 @@ for cycle_num in range(sys.maxsize):
 
     if next_send_time_delta > 0:
       time.sleep(next_send_time_delta)
-    ret_msg = struct.pack(pack_seq_num, seq_nums[next_socket]) + \
-        padding_sequence
-    socks[next_socket].sendto(ret_msg, addr)
+    ret_msg = struct.pack(pack_seq_num, seq_nums[next_socket])
+    send_buffer[:seq_len] = ret_msg
+    socks[next_socket].sendto(send_buffer, addr)
     send_times[next_socket][seq_nums[next_socket]] = time.time()
     seq_nums[next_socket] += 1
   packets_actually_sent = [seq_nums_end_i-seq_nums_beginning_i for seq_nums_beginning_i, seq_nums_end_i in zip(seq_nums_beginning, seq_nums_end)]
