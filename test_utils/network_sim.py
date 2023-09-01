@@ -26,6 +26,7 @@ atexit.register(killall)
 parser = argparse.ArgumentParser()
 parser.add_argument('--qdisc', type=str, default='fq')
 parser.add_argument('--iperf', action='store_true')
+parser.add_argument('--python-interpreter-path', default='/usr/bin/python')
 
 args = parser.parse_args()
 
@@ -148,10 +149,10 @@ for delay in (50,):
             # debug = {}
             debug = {"stdout": None, "stderr": None}
 
-            # server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w logs/server.pcap (tcp || udp) and ip'.split(' '), **debug)
+            server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w logs/server.pcap (tcp || udp) and ip'.split(' '), **debug)
             client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w logs/client.pcap (tcp || udp) and ip'.split(' '), **debug)
 
-            server_popen = h2.popen(f'python ../server.py'.split(' '), **debug)
+            server_popen = h2.popen(f'{args.python_interpreter_path} ../server.py'.split(' '), **debug)
             if args.iperf:
                 iperf_server_popen = h1.popen(f'iperf3 -s'.split(' '), **{"stdout": None, "stderr": None})
             time.sleep(1)
@@ -159,7 +160,7 @@ for delay in (50,):
                 iperf_client_popen = h2.popen(f'iperf3 -c {h1.IP()} --congestion reno -tinf'.split(' '), **{"stdout": None, "stderr": None})
                 time.sleep(4)
 
-            client_popen = h1.popen('python ../client.py -s 192.168.0.2'.split(' '), **{"stdout": None, "stderr": None})
+            client_popen = h1.popen(f'{args.python_interpreter_path} ../client.py -s 192.168.0.2'.split(' '), **{"stdout": None, "stderr": None})
             client_popen.communicate()
 
             if args.iperf:
@@ -186,12 +187,12 @@ for delay in (50,):
 
             time.sleep(5)
 
-            # server_tcpdump_popen.terminate()
-            # out, err = server_tcpdump_popen.communicate()
-            # if out:
-            #     print("server_tcpdump out", out.decode("utf-8"))
-            # if err:
-            #     print("server_tcpdump err", err.decode("utf-8"))
+            server_tcpdump_popen.terminate()
+            out, err = server_tcpdump_popen.communicate()
+            if out:
+                print("server_tcpdump out", out.decode("utf-8"))
+            if err:
+                print("server_tcpdump err", err.decode("utf-8"))
 
             client_tcpdump_popen.terminate()
             out, err = client_tcpdump_popen.communicate()

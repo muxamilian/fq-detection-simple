@@ -46,8 +46,13 @@ print(f'{initial_rtt=}')
 already_encountered_loss = False
 rates = [15, 30]
 latest_rtts = [initial_rtt] * len(ports)
+unpack_ack_and_sock_index = '!IB'
+pack_seq_num = '!I'
+recv_packet_len = seq_len + from_socket_len
 for sock in socks:
   sock.setblocking(False)
+next_socket = 0
+port_indices = range(len(ports))
 for cycle_num in range(sys.maxsize):
   seq_nums_beginning = list(seq_nums)
   num_acked = [0] * len(ports) 
@@ -71,9 +76,10 @@ for cycle_num in range(sys.maxsize):
       break
     try:
       while True:
-        data, _ = main_socket.recvfrom(8)
-        assert len(data) == seq_len + from_socket_len, f'{data}'
-        ack_num, sock_index = struct.unpack('!IB', data[0:5])
+        # data, _ = main_socket.recvfrom(recv_packet_len)
+        data = main_socket.recv(recv_packet_len)
+        # assert len(data) == recv_packet_len, f'{data}'
+        ack_num, sock_index = struct.unpack(unpack_ack_and_sock_index, data)
         latest_rtts[sock_index] = current_time - send_times[sock_index][ack_num]
         if ack_num >= seq_nums_beginning[sock_index] and (seq_nums_end is None or ack_num < seq_nums_end[sock_index]):
           if num_acked[sock_index] == 0:
@@ -86,11 +92,7 @@ for cycle_num in range(sys.maxsize):
       pass
     
     next_send_time_delta = inf
-    next_socket = 0
-    # port_indices = list(range(len(ports)))
-    # random.shuffle(port_indices)
-    # for i in port_indices:
-    for i in range(len(ports)):
+    for i in port_indices:
       packets_that_should_have_been_sent = math.floor(rates[i]*(current_time-start_time))
       packets_that_were_not_sent_but_should_have = packets_that_should_have_been_sent - (seq_nums[i] - seq_nums_beginning[i])
       if packets_that_were_not_sent_but_should_have <= 0:
@@ -104,13 +106,13 @@ for cycle_num in range(sys.maxsize):
 
     if next_send_time_delta > 0:
       time.sleep(next_send_time_delta)
-    ret_msg = struct.pack('!I', seq_nums[next_socket]) + \
+    ret_msg = struct.pack(pack_seq_num, seq_nums[next_socket]) + \
         padding_sequence
     socks[next_socket].sendto(ret_msg, addr)
     send_times[next_socket][seq_nums[next_socket]] = time.time()
     seq_nums[next_socket] += 1
   packets_actually_sent = [seq_nums_end_i-seq_nums_beginning_i for seq_nums_beginning_i, seq_nums_end_i in zip(seq_nums_beginning, seq_nums_end)]
-  sent_enough = [math.ceil(packets_actually_sent_i) + 1 >= should_send_i for should_send_i, packets_actually_sent_i in zip(should_send, packets_actually_sent)]
+  sent_enough = [math.ceil(packets_actually_sent_i) + 1 >= should_send_i * 15/16 for should_send_i, packets_actually_sent_i in zip(should_send, packets_actually_sent)]
   rtts_ms = [round(item*1000) for item in latest_rtts]
   print(f'End {cycle_num=},{packets_actually_sent=},{rtts_ms=},{sent_enough=},{seq_nums_beginning=},{should_send=},{seq_nums_end=},{num_acked=},{seq_nums=}')
   
