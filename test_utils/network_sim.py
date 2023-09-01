@@ -76,7 +76,7 @@ bw_results = []
 delay_results = []
 results = []
 
-max_reps = 10
+max_reps = 1
 
 # for delay in (10, 50, 100):
 for delay in (50,):
@@ -144,12 +144,6 @@ for delay in (50,):
             print([h2.cmd(item) for item in generate_tc_commands('h2-eth0')])
             print([s1.cmd(item) for item in generate_tc_commands('s1-eth1', with_delay=True)])
             print([s1.cmd(item) for item in generate_tc_commands('s1-eth2')])
-
-            # offloading_options = "gso off tso off gro off"
-            # print(h1.cmd("ethtool -K h1-eth0 " + offloading_options))
-            # print(h2.cmd("ethtool -K h2-eth0 " + offloading_options))
-            # print(s1.cmd("ethtool -K s1-eth1 " + offloading_options))
-            # print(s1.cmd("ethtool -K s1-eth2 " + offloading_options))
 
             # debug = {}
             debug = {"stdout": None, "stderr": None}

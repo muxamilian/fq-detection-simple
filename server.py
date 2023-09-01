@@ -5,6 +5,7 @@ import socket
 import time
 import sys
 import struct
+import random
 
 socks = []
 seq_nums = []
@@ -13,7 +14,7 @@ remote_addresses = [None] * 2
 seq_len = 4
 from_socket_len = 1
 minimum_payload_size = 1200
-padding_sequence_len = 1200-seq_len-from_socket_len
+padding_sequence_len = 1200-seq_len
 padding_sequence = ('A'*padding_sequence_len).encode()
 inf = float('inf')
 
@@ -50,16 +51,19 @@ for cycle_num in range(sys.maxsize):
   seq_nums_beginning = list(seq_nums)
   num_acked = [0] * len(ports) 
   start_time = time.time()
-  time_to_run = max(max(latest_rtts), 0.1)
+  time_to_run = max(max(latest_rtts), 0.2)
   should_send = [item*time_to_run for item in rates]
   seq_nums_end = None
-  print(f'Start {cycle_num=},{rates=},{time_to_run}')
+  rates_in_mbit = [round(item*8*minimum_payload_size/1000000, 1) for item in rates]
+  print(f'Start {cycle_num=},{rates=}:{rates_in_mbit},{time_to_run}')
+  time_to_wait = 4*max(latest_rtts)
   while True:
     current_time = time.time()
-    if current_time > start_time + 4*time_to_run:
-      break
-    elif seq_nums_end is None and current_time > start_time + time_to_run:
+    if seq_nums_end is None and current_time > start_time + time_to_run:
+      time_to_wait = 4*max(latest_rtts)
       seq_nums_end = list(seq_nums)
+    elif current_time > start_time + time_to_run + time_to_wait:
+      break
     try:
       while True:
         data, _ = main_socket.recvfrom(8)
@@ -74,13 +78,17 @@ for cycle_num in range(sys.maxsize):
     
     next_send_time_delta = inf
     next_socket = 0
-    for i in range(len(ports)-1, -1, -1):
+    # port_indices = list(range(len(ports)))
+    # random.shuffle(port_indices)
+    # for i in port_indices:
+    for i in range(len(ports)):
       packets_that_should_have_been_sent = math.floor(rates[i]*(current_time-start_time))
-      if packets_that_should_have_been_sent < seq_nums[i] - seq_nums_beginning[i]:
+      packets_that_were_not_sent_but_should_have = packets_that_should_have_been_sent - (seq_nums[i] - seq_nums_beginning[i])
+      if packets_that_were_not_sent_but_should_have <= 0:
           delta_till_next_packet = start_time + (packets_that_should_have_been_sent + 1)/rates[i] - current_time
-          assert delta_till_next_packet >= 0, f'{packets_that_should_have_been_sent=},{seq_nums[i]},{delta_till_next_packet=}'
       else:
-        delta_till_next_packet = 0
+        delta_till_next_packet = -packets_that_should_have_been_sent
+        # delta_till_next_packet = 0
       if delta_till_next_packet <= next_send_time_delta:
         next_socket = i
         next_send_time_delta = delta_till_next_packet
@@ -94,28 +102,26 @@ for cycle_num in range(sys.maxsize):
     seq_nums[next_socket] += 1
   packets_actually_sent = [seq_nums_end_i-seq_nums_beginning_i for seq_nums_beginning_i, seq_nums_end_i in zip(seq_nums_beginning, seq_nums_end)]
   sent_enough = [math.ceil(packets_actually_sent_i) + 1 >= should_send_i * 7/8 for should_send_i, packets_actually_sent_i in zip(should_send, packets_actually_sent)]
-  print(f'End {cycle_num=},{packets_actually_sent=},{latest_rtts=},{sent_enough=},{seq_nums_beginning=},{should_send=},{seq_nums_end=},{num_acked=},{seq_nums=}')
+  rtts_ms = [round(item*1000) for item in latest_rtts]
+  print(f'End {cycle_num=},{packets_actually_sent=},{rtts_ms=},{sent_enough=},{seq_nums_beginning=},{should_send=},{seq_nums_end=},{num_acked=},{seq_nums=}')
   
   if not all(sent_enough):
     print('Failed to utilize the link. Aborting.')
     break
-  # elif num_acked[0] < packets_actually_sent[0]:
-  #   print('Had packet loss on the flow sending less. That shouldn\'t happen. Aborting.')
-  #   quit(1)
-  elif num_acked[1] < packets_actually_sent[1] * 7/8:
+  elif num_acked[0] < packets_actually_sent[0] * 7/8 and num_acked[1] < packets_actually_sent[1] * 7/8:
     if not already_encountered_loss:
       already_encountered_loss = True
       acked_over_sent = num_acked[1]/packets_actually_sent[1]
       print(f'Encountered packet loss, {acked_over_sent=}')
-      rates = [rate*acked_over_sent*2 for rate in rates]
+      rates = [int(round(rate*acked_over_sent*2)) for rate in rates]
     else:
       loss_ratio = (num_acked[0]/packets_actually_sent[0])/(num_acked[1]/packets_actually_sent[1])
       if loss_ratio >= 1.5:
-        confidence = (loss_ratio-1.5)*2
-        print(f'Fair queuing detected with a confidence of {round(confidence*100)}%')
+        confidence = min((loss_ratio-1.5)*2, 1)
+        print(f'Fair queuing detected with a confidence of {round(confidence*100)}%, {loss_ratio=}')
       else:
-        confidence = 1-((loss_ratio-1)*2)
-        print(f'Fair queuing NOT detected with a confidence of {round(confidence*100)}%')
+        confidence = min(1-((loss_ratio-1)*2), 1)
+        print(f'Fair queuing NOT detected with a confidence of {round(confidence*100)}%, {loss_ratio=}')
       break
   else: 
     rates = [rate*2 for rate in rates]
