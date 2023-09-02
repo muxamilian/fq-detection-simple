@@ -166,6 +166,7 @@ for cycle_num in range(sys.maxsize):
   elif not all(sent_enough):
     print('Failed to utilize the link. Aborting')
     break
+  # If nothing happened, double the sending rate, to try to saturate the link
   rates = [rate*2 for rate in rates]
 
 print('Terminating server')
