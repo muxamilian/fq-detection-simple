@@ -2,6 +2,7 @@
 import argparse
 import socket
 import struct
+from select import select 
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--port', default=13579)
@@ -17,13 +18,18 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 base_addr = (args.server_ip_address, ports[0])
 
 sock.sendto(struct.pack(packet_seq_num, 0), base_addr)
-print('client sent handshake to server')
+final_seq_num = 2**32 - 1
 
 # Just echo everything back forever
 while True:
-    data, addr = sock.recvfrom(seq_num_len)
-    msg = data
-    seq_num = struct.unpack(packet_seq_num, msg)[0]
-    if seq_num == 2**32 - 1:
+    readable, _, _ = select([sock], [], [], 5)
+    if len(readable) == 0:
+        print('Timeout in client')
         break
-    sock.sendto(msg + struct.pack(pack_byte, ports.index(addr[1])), base_addr)
+    data, addr = readable[0].recvfrom(seq_num_len, 5)
+    seq_num = struct.unpack(packet_seq_num, data)[0]
+    sock_num = ports.index(addr[1])
+    if seq_num == final_seq_num:
+        print('Terminating client')
+        break
+    sock.sendto(data + struct.pack(pack_byte, sock_num), base_addr)

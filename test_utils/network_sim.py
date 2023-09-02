@@ -71,21 +71,17 @@ os.makedirs('results', exist_ok=True)
 class Opts:
     pass
 
-max_time = 90
-
 bw_results = []
 delay_results = []
 results = []
 
-max_reps = 1
+max_reps = 10
 
-# for delay in (10, 50, 100):
-for delay in (50,):
+for delay in (10, 50, 100):
     bw_results.append([])
     delay_results.append([])
     results.append([])
-    # for rate in (10, 50, 100):
-    for rate in (50,):
+    for rate in (10, 50):#, 100):
         bw_results[-1].append([])
         delay_results[-1].append([])
         results[-1].append([])
@@ -141,13 +137,13 @@ for delay in (50,):
                 print("dev:", if_name, "with_delay:", with_delay, "commands:", strings)
                 return strings
 
-            print([h1.cmd(item) for item in generate_tc_commands('h1-eth0', with_delay=True)])
+            print([h1.cmd(item) for item in generate_tc_commands('h1-eth0')])
             print([h2.cmd(item) for item in generate_tc_commands('h2-eth0')])
             print([s1.cmd(item) for item in generate_tc_commands('s1-eth1', with_delay=True)])
-            print([s1.cmd(item) for item in generate_tc_commands('s1-eth2')])
+            print([s1.cmd(item) for item in generate_tc_commands('s1-eth2', with_delay=True)])
 
-            # debug = {}
-            debug = {"stdout": None, "stderr": None}
+            debug = {}
+            # debug = {"stdout": None, "stderr": None}
 
             server_tcpdump_popen = h2.popen(f'tcpdump -s 100 -i h2-eth0 -w logs/server.pcap (tcp || udp) and ip'.split(' '), **debug)
             client_tcpdump_popen = h1.popen(f'tcpdump -s 100 -i h1-eth0 -w logs/client.pcap (tcp || udp) and ip'.split(' '), **debug)
@@ -155,7 +151,7 @@ for delay in (50,):
             server_popen = h2.popen(f'{args.python_interpreter_path} ../server.py'.split(' '), **debug)
             if args.iperf:
                 iperf_server_popen = h1.popen(f'iperf3 -s'.split(' '), **{"stdout": None, "stderr": None})
-            time.sleep(1)
+            time.sleep(.1)
             if args.iperf:
                 iperf_client_popen = h2.popen(f'iperf3 -c {h1.IP()} --congestion reno -tinf'.split(' '), **{"stdout": None, "stderr": None})
                 time.sleep(4)
@@ -185,7 +181,15 @@ for delay in (50,):
             if err:
                 print("client err", err.decode("utf-8"))
 
-            time.sleep(5)
+            server_popen.terminate()
+            out, err = server_popen.communicate()
+            if out:
+                server_out = out.decode("utf-8")
+                print("server out", server_out)
+            if err:
+                print("server err", err.decode("utf-8"))
+
+            time.sleep(1)
 
             server_tcpdump_popen.terminate()
             out, err = server_tcpdump_popen.communicate()
@@ -201,35 +205,25 @@ for delay in (50,):
             if err:
                 print("client_tcpdump err", err.decode("utf-8"))
 
-            server_popen.terminate()
-            out, err = server_popen.communicate()
-            if out:
-                server_out = out.decode("utf-8")
-                print("server out", server_out)
-            if err:
-                print("server err", err.decode("utf-8"))
-
-            fq_detected = 'Fair queuing detected' in server_out
-            correct = 'fq' in opt.qdisc == fq_detected
+            correct = False
+            if 'Fair queuing detected' in server_out and 'fq' in opt.qdisc:
+                correct = True
+            if 'First-come first-served detected' in server_out and 'pfifo' in opt.qdisc:
+                correct = True
+            if 'Failed to utilize the link' in server_out:
+                correct = None
 
             results[-1][-1].append(correct)
 
             rep_counter += 1
-            time.sleep(5)
+
+            time.sleep(1)
 
 iperf_str = "_iperf" if args.iperf else ""
 
 print("results", results)
-with open('results/results_'+args.qdisc+'_'+args.cc+iperf_str+'.txt', "w") as f:
+with open('results/results_'+args.qdisc+iperf_str+'.txt', "w") as f:
     f.write(str(results))
-
-print("bw_results", bw_results, 'mean', np.mean(np.array(bw_results)))
-with open('results/bw_results_'+args.qdisc+'_'+args.cc+iperf_str+'.txt', "w") as f:
-    f.write(str(bw_results))
-
-print("delay_results", delay_results, 'mean', np.mean(np.array(delay_results)))
-with open('results/delay_results_'+args.qdisc+'_'+args.cc+iperf_str+'.txt', "w") as f:
-    f.write(str(delay_results))
 
 net.stop()
 
