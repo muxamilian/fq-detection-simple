@@ -24,8 +24,8 @@ args = parser.parse_args()
 ports = [args.port, args.port+1]
 
 for port in ports:
-  sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-  sock.bind(('0.0.0.0', port))
+  sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+  sock.bind(('::', port))
   socks.append(sock)
   send_times.append({})
   seq_nums.append(0)
@@ -40,7 +40,6 @@ ret_msg = struct.pack(pack_seq_num, 0)
 main_socket.sendto(ret_msg, addr)
 data, addr = socks[0].recvfrom(1500)
 initial_rtt = time.time() - t1
-print(f'{initial_rtt=}')
 
 # Detection part starting
 already_encountered_loss = False
