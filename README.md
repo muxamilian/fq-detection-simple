@@ -4,7 +4,7 @@ To detect fair queuing on a connection, run the server and the client script. No
 1. `python server.py` on the server. The server is the computer conducting the test and outputting the results. 
 2. `python client.py -s <ip_address_or_name_of_server>` on the client.
 
-The test checks whether there is fair queuing when sending data from the server to the client. At the end of the test (should take a couple of seconds) the server will output will indicate one of three cases: 
+The test checks whether there is fair queuing when sending data from the server to the client. At the end of the test (should take a couple of seconds) the server output will indicate one of three cases: 
 * There's fair queuing 
 * There's first-come first-served
 * The test was inconclusive because the link could not be saturated (CPU too weak)
