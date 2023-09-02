@@ -5,6 +5,8 @@ import socket
 import time
 import sys
 import struct
+import gc
+gc.disable()
 
 socks = []
 seq_nums = []
@@ -81,7 +83,7 @@ for cycle_num in range(sys.maxsize):
   time_to_run = max(max(max(latest_rtts), 0.1), min_time)
   # How many packets should be sent for this measurement
   should_send = [item*time_to_run for item in rates]
-  # rates_in_mbit = [round(item*8*minimum_payload_size/1000000, 1) for item in rates]
+  rates_in_mbit = [round(item*8*minimum_payload_size/1000000, 1) for item in rates]
   # print(f'Start {cycle_num=},{rates=}:{rates_in_mbit},{time_to_run}')
   while True:
     current_time = time.time()
@@ -138,12 +140,14 @@ for cycle_num in range(sys.maxsize):
   # Could the link be saturated?
   sent_enough = [math.ceil(packets_actually_sent_i) + 1 >= should_send_i * 15/16 for should_send_i, packets_actually_sent_i in zip(should_send, packets_actually_sent)]
   rtts_ms = [round(item*1000) for item in latest_rtts]
+  receiving_rate1 = (num_acked[0]/(last_ack_times[0]-first_ack_times[0]))
+  receiving_rate2 = (num_acked[1]/(last_ack_times[1]-first_ack_times[1]))
+  sending_rate1 = (packets_actually_sent[0]/(send_end_time-start_time))
+  sending_rate2 = (packets_actually_sent[1]/(send_end_time-start_time))
   # Ratio of receiving rate over sending rate for the first flow
-  first_ratio = ((num_acked[0]/(last_ack_times[0]-first_ack_times[0]))/
-            (packets_actually_sent[0]/(send_end_time-start_time)))
+  first_ratio = receiving_rate1/sending_rate1
   # Ratio of receiving rate over sending rate for the second flow
-  second_ratio = ((num_acked[1]/(last_ack_times[1]-first_ack_times[1]))/
-            (packets_actually_sent[1]/(send_end_time-start_time)))
+  second_ratio = receiving_rate2/sending_rate2
   # print(f'End {cycle_num=},{packets_actually_sent=},{rtts_ms=},{sent_enough=},{seq_nums_beginning=},{should_send=},{seq_nums_end=},{num_acked=},{seq_nums=},{first_ratio=},{second_ratio=}')
   
   # This means that the client only receives data at half the rate, at which the server is sending
@@ -157,14 +161,15 @@ for cycle_num in range(sys.maxsize):
     if loss_ratio >= 1.5:
       # This means that second flow sent a lot more but couldn't get more data to the client
       confidence = min((loss_ratio-1.5)*2, 1)
-      print(f'Fair queuing detected with a confidence of {round(confidence*100)}%, {loss_ratio=}')
+      print(f'Fair queuing detected with a confidence of {round(confidence*100)}%')#, {loss_ratio=}')
     else:
       # The second flow sent more and got more data to the client
       confidence = min(1-((loss_ratio-1)*2), 1)
-      print(f'First-come first-served detected with a confidence of {round(confidence*100)}%, {loss_ratio=}')
+      print(f'First-come first-served detected with a confidence of {round(confidence*100)}%')#, {loss_ratio=}')
     break
   elif not all(sent_enough):
-    print('Failed to utilize the link. Aborting')
+    managed_to_send_mbit = round((sending_rate1+sending_rate2)*8*minimum_payload_size/1000000, 1)
+    print(f'Failed to utilize the link. Tried to send {sum(rates_in_mbit)} Mbit/s but only managed {managed_to_send_mbit} Mbit/s. Aborting')
     break
   # If nothing happened, double the sending rate, to try to saturate the link
   rates = [rate*2 for rate in rates]
