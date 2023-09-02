@@ -4,4 +4,15 @@ To detect fair queuing on a connection, run the server and the client script. No
 1. `python server.py` on the server. The server is the computer conducting the test and outputting the results. 
 2. `python client.py -s <ip_address_or_name_of_server>` on the client.
 
-The test checks whether there is fair queuing when sending data from the server to the client. 
+The test checks whether there is fair queuing when sending data from the server to the client. At the end of the test (should take a couple of seconds) the server will output that
+* there's fair queuing 
+* there's first-come first-served
+* the test was inconclusive because the link could not be saturated (CPU too weak)
+
+# Test suite
+The measurement tool (requires *mininet* can detect the absence/presence of fair queuing with an accuracy of close to 100% on a range of delays and bandwidths. 
+* Run `sudo python test_utils/network_sim.py --qdisc fq_codel` to evaluate the accuracy for `fq_codel` (fair queuing)
+* Run `sudo python test_utils/network_sim.py --qdisc fq` to evaluate the accuracy for `fq` (fair queuing)
+* Run `sudo python test_utils/network_sim.py --qdisc pfifo` to evaluate the accuracy for `pfifo` (first-come first-served)
+
+You can add the `--iperf` flag to simulate cross traffic (requires `iperf3`). 
