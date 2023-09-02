@@ -10,7 +10,8 @@ The test checks whether there is fair queuing when sending data from the server 
 * The test was inconclusive because the link could not be saturated (CPU too weak)
 
 # Test suite
-The measurement tool (requires *mininet* can detect the absence/presence of fair queuing with an accuracy of close to 100% on a range of delays and bandwidths. 
+The measurement tool can detect the absence/presence of fair queuing with an accuracy of close to 100% on a range of delays and bandwidths. 
+This can be verified using the included test suite (requires *mininet*). 
 * Run `sudo python test_utils/network_sim.py --qdisc fq_codel` to evaluate the accuracy for `fq_codel` (fair queuing)
 * Run `sudo python test_utils/network_sim.py --qdisc fq` to evaluate the accuracy for `fq` (fair queuing)
 * Run `sudo python test_utils/network_sim.py --qdisc pfifo` to evaluate the accuracy for `pfifo` (first-come first-served)
