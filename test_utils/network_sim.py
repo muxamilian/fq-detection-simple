@@ -206,7 +206,7 @@ for delay in (10, 50, 100):
                 print("client_tcpdump err", err.decode("utf-8"))
 
             correct = False
-            if 'Fair queuing detected' in server_out and 'fq' in opt.qdisc:
+            if 'Fair queuing detected' in server_out and 'fq' in opt.qdisc or 'cake' in opt.qdisc:
                 correct = True
             if 'First-come first-served detected' in server_out and 'pfifo' in opt.qdisc:
                 correct = True

@@ -4,6 +4,8 @@ import socket
 import struct
 from select import select 
 
+# The client basically only echoes acknowledgements to the server
+# The server code is more interesting
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--port', default=13579)
 parser.add_argument('-s', '--server-address', default='127.0.0.1')
@@ -14,21 +16,27 @@ minimum_payload_size = 1200
 packet_seq_num = '!I'
 pack_byte = 'B'
 seq_num_len = 4
+timeout = 5
+# Receiving this sequence number from the server terminates the test
+final_seq_num = 2**32 - 1
 
 if args.ipv6:
     address_family = socket.AF_INET6
 else:
     address_family = socket.AF_INET
+# Get IP address from host name
 resolved_server_address = socket.getaddrinfo(args.server_address, args.port, address_family, socket.SOCK_DGRAM)
 sock = socket.socket(address_family, socket.SOCK_DGRAM)
+# Address of the server and port number
 base_addr = (resolved_server_address[0][4][0], ports[0])
 
+# Send some kind of handshake
 sock.sendto(struct.pack(packet_seq_num, 0), base_addr)
-final_seq_num = 2**32 - 1
 
 # Just echo everything back forever
 while True:
-    readable, _, _ = select([sock], [], [], 5)
+    # Receive packet from server or timeout
+    readable, _, _ = select([sock], [], [], timeout)
     if len(readable) == 0:
         print('Timeout in client')
         break
@@ -38,4 +46,6 @@ while True:
     if seq_num == final_seq_num:
         print('Terminating client')
         break
+    # Echo back and tell the server from port it came, the lower one or the higher one. 
+    # This is encoded in `sock_num`
     sock.sendto(data + struct.pack(pack_byte, sock_num), base_addr)
