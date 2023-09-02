@@ -14,6 +14,7 @@ The measurement tool can detect the absence/presence of fair queuing with an acc
 This can be verified using the included test suite (requires *mininet*). 
 * Run `sudo python test_utils/network_sim.py --qdisc fq_codel` to evaluate the accuracy for `fq_codel` (fair queuing)
 * Run `sudo python test_utils/network_sim.py --qdisc fq` to evaluate the accuracy for `fq` (fair queuing)
+* Run `sudo python test_utils/network_sim.py --qdisc cake` to evaluate the accuracy for `cake` (fair queuing)
 * Run `sudo python test_utils/network_sim.py --qdisc pfifo` to evaluate the accuracy for `pfifo` (first-come first-served)
 
 You can add the `--iperf` flag to simulate cross traffic (requires `iperf3`). 
