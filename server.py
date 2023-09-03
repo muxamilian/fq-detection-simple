@@ -5,8 +5,6 @@ import socket
 import time
 import sys
 import struct
-# import gc
-# gc.disable()
 
 socks = []
 seq_nums = []
