@@ -5,8 +5,8 @@ import socket
 import time
 import sys
 import struct
-import gc
-gc.disable()
+# import gc
+# gc.disable()
 
 socks = []
 seq_nums = []
@@ -86,7 +86,7 @@ for cycle_num in range(sys.maxsize):
   # How many packets should be sent for this measurement
   should_send = [item*time_to_run for item in rates]
   rates_in_mbit = [round(item*8*minimum_payload_size/1000000, 1) for item in rates]
-  # print(f'Start {cycle_num=},{rates=}:{rates_in_mbit},{time_to_run}')
+  print(f'Start {cycle_num=},{rates=}:{rates_in_mbit},{time_to_run}')
   while True:
     current_time = time.time()
     # Check if enough packets were sent already
@@ -150,7 +150,7 @@ for cycle_num in range(sys.maxsize):
   first_ratio = receiving_rate1/sending_rate1
   # Ratio of receiving rate over sending rate for the second flow
   second_ratio = receiving_rate2/sending_rate2
-  # print(f'End {cycle_num=},{packets_actually_sent=},{rtts_ms=},{sent_enough=},{seq_nums_beginning=},{should_send=},{seq_nums_end=},{num_acked=},{seq_nums=},{first_ratio=},{second_ratio=}')
+  print(f'End {cycle_num=},{packets_actually_sent=},{rtts_ms=},{sent_enough=},{seq_nums_beginning=},{should_send=},{seq_nums_end=},{num_acked=},{seq_nums=},{first_ratio=},{second_ratio=}')
   
   # This means that the client only receives data at half the rate, at which the server is sending
   # This means there's severe congestion. We want this to test whether there's fair queuing!

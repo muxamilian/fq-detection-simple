@@ -3,8 +3,8 @@ import argparse
 import socket
 import struct
 from select import select 
-import gc
-gc.disable()
+# import gc
+# gc.disable()
 
 # The client basically only echoes acknowledgements to the server
 # The server code is more interesting
