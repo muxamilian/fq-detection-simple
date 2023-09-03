@@ -175,5 +175,3 @@ for cycle_num in range(sys.maxsize):
   rates = [rate*2 for rate in rates]
 
 print('Terminating server')
-# Send the client a special packet indicating the end of the test
-socks[0].sendto(struct.pack('!I', 2**32 - 1), initial_addr)

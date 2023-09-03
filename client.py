@@ -17,8 +17,6 @@ packet_seq_num = '!I'
 pack_byte = 'B'
 seq_num_len = 4
 timeout = 5
-# Receiving this sequence number from the server terminates the test
-final_seq_num = 2**32 - 1
 
 if args.ipv6:
     address_family = socket.AF_INET6
@@ -41,11 +39,7 @@ while True:
         print('Timeout in client')
         break
     data, addr = readable[0].recvfrom(seq_num_len)
-    seq_num = struct.unpack(packet_seq_num, data)[0]
     sock_num = ports.index(addr[1])
-    if seq_num == final_seq_num:
-        print('Terminating client')
-        break
     # Echo back and tell the server from port it came, the lower one or the higher one. 
     # This is encoded in `sock_num`
     sock.sendto(data + struct.pack(pack_byte, sock_num), base_addr)
