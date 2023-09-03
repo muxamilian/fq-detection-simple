@@ -30,7 +30,7 @@ else:
 resolved_server_address = socket.getaddrinfo(args.server_address, args.port, address_family, socket.SOCK_DGRAM)
 sock = socket.socket(address_family, socket.SOCK_DGRAM)
 # Address of the server and port number
-base_addr = (resolved_server_address[0][4][0], ports[0])
+base_addr = (resolved_server_address[0][4][0], ports[0]+2)
 
 # Send some kind of handshake
 sock.sendto(struct.pack(packet_seq_num, 0), base_addr)
@@ -42,7 +42,7 @@ while True:
     if len(readable) == 0:
         print('Timeout in client')
         break
-    data, addr = readable[0].recvfrom(seq_num_len, 5)
+    data, addr = readable[0].recvfrom(seq_num_len)
     seq_num = struct.unpack(packet_seq_num, data)[0]
     sock_num = ports.index(addr[1])
     if seq_num == final_seq_num:

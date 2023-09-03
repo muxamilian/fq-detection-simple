@@ -38,25 +38,27 @@ for port in ports:
   send_times.append({})
   seq_nums.append(0)
 
-# Use only one socket to receive acknowledgements. Simplifies the code. 
-main_socket = socks[0]
+recv_port = args.port+2
+
+# Use dedicated socket to receive acknowledgements. This one is non-blocking. 
+recv_socket = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
+recv_socket.bind(('::', recv_port))
 
 # Just get an estimate of the RTT
-data, addr = socks[0].recvfrom(1500)
+data, addr = recv_socket.recvfrom(1500)
 initial_addr = addr
 t1 = time.time()
 ret_msg = struct.pack(pack_seq_num, 0)
-main_socket.sendto(ret_msg, addr)
-data, addr = socks[0].recvfrom(1500)
+socks[0].sendto(ret_msg, addr)
+data, addr = recv_socket.recvfrom(1500)
 initial_rtt = time.time() - t1
 
 # Detection part starting
 # Initial rates in packets per second
+recv_socket.setblocking(False)
 rates = [15, 30]
 latest_rtts = [initial_rtt] * len(ports)
 recv_packet_len = seq_len + from_socket_len
-for sock in socks:
-  sock.setblocking(False)
 # Next socket to send from
 next_socket = 0
 port_indices = range(len(ports))
@@ -94,7 +96,7 @@ for cycle_num in range(sys.maxsize):
     try:
       while True:
         # Try to receive an acknowledgement from the client
-        main_socket.recv_into(data_buffer)
+        recv_socket.recv_into(data_buffer)
         ack_num, sock_index = struct.unpack(unpack_ack_and_sock_index, data_buffer)
         latest_rtts[sock_index] = current_time - send_times[sock_index][ack_num]
         if ack_num >= seq_nums_beginning[sock_index] and (seq_nums_end is None or ack_num < seq_nums_end[sock_index]):
@@ -176,4 +178,4 @@ for cycle_num in range(sys.maxsize):
 
 print('Terminating server')
 # Send the client a special packet indicating the end of the test
-main_socket.sendto(struct.pack('!I', 2**32 - 1), initial_addr)
+socks[0].sendto(struct.pack('!I', 2**32 - 1), initial_addr)
