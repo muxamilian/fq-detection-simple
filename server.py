@@ -86,7 +86,7 @@ for cycle_num in range(sys.maxsize):
   should_send = [item*time_to_run for item in rates]
   rates_in_mbit = [round(item*8*minimum_payload_size/1000000, 1) for item in rates]
   if args.debug:
-    print(f'Start {cycle_num=},{rates=}:{rates_in_mbit},{time_to_run}')
+    print(f'Start {cycle_num=},{rates=},{rates_in_mbit=},{time_to_run=}')
   while True:
     current_time = time.time()
     # Check if enough packets were sent already
