@@ -28,3 +28,8 @@ To do the test over an IPv6 connection, add the `--ipv6` flag at the client.
 There's a congestion control algorithm which tests for fair queuing and takes advantage of it, if it is present: [https://github.com/muxamilian/fair-queuing-aware-congestion-control](https://github.com/muxamilian/fair-queuing-aware-congestion-control)
 
 This measurement tool builds on earlier work: [https://github.com/CN-TU/PCC-Uspace](https://github.com/CN-TU/PCC-Uspace)
+
+# Short video
+
+https://github.com/muxamilian/fq-detection-simple/assets/1943719/00c574ca-d016-4801-accf-789dbcf6b19a
+
