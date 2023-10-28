@@ -14,21 +14,22 @@ seq_len = 4
 from_socket_len = 1
 pack_seq_num = '!I'
 unpack_ack_and_sock_index = '!IB'
-# Packets are 1200 bytes, the minimum in the QUIC spec. 
-# This means that the test probably also runs over VPNs etc. 
-minimum_payload_size = 1200
-padding_sequence_len = 1200-seq_len
-padding_sequence = ('A'*padding_sequence_len).encode()
 inf = float('inf')
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-p', '--port', default=13579)
+parser.add_argument('--mtu', type=int, default=1500)
 parser.add_argument('--debug', action='store_true')
 args = parser.parse_args()
 # Two ports are used. The second port sends with twice the bandwidth. 
 # If there's fair queuing, one will see that more data is sent from the second flow, 
 # but because of fair queuing, the client receives the same bandwidth from both flows. 
 ports = [args.port, args.port+1]
+
+# Subtract 40 for IPv6 and 8 for UDP
+payload_size = args.mtu - 40 - 8
+padding_sequence_len = payload_size - seq_len
+padding_sequence = ('A'*padding_sequence_len).encode()
 
 for port in ports:
   sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
@@ -46,6 +47,8 @@ recv_socket.bind(('::', recv_port))
 # Just get an estimate of the RTT
 data, addr = recv_socket.recvfrom(1500)
 initial_addr = addr
+if args.debug:
+  print('Got connection from', initial_addr, type(initial_addr[0]))
 t1 = time.time()
 ret_msg = struct.pack(pack_seq_num, 0)
 socks[0].sendto(ret_msg, addr)
@@ -62,7 +65,8 @@ recv_packet_len = seq_len + from_socket_len
 next_socket = 0
 port_indices = range(len(ports))
 data_buffer = bytearray(recv_packet_len)
-send_buffer = bytearray(minimum_payload_size)
+send_buffer = bytearray(payload_size)
+send_buffer[seq_len:] = padding_sequence
 # We run as many cycles as necessary to detect fair queuing
 for cycle_num in range(sys.maxsize):
   # Current seq nums at the beginning of the cycle
@@ -84,7 +88,7 @@ for cycle_num in range(sys.maxsize):
   time_to_run = max(max(max(latest_rtts), 0.1), min_time)
   # How many packets should be sent for this measurement
   should_send = [item*time_to_run for item in rates]
-  rates_in_mbit = [round(item*8*minimum_payload_size/1000000, 1) for item in rates]
+  rates_in_mbit = [round(item*8*args.mtu/1000000, 1) for item in rates]
   if args.debug:
     print(f'Start {cycle_num=},{rates=},{rates_in_mbit=},{time_to_run=}')
   while True:
@@ -171,7 +175,7 @@ for cycle_num in range(sys.maxsize):
       print(f'First-come first-served detected with a confidence of {round(confidence*100)}%')#, {loss_ratio=}')
     break
   elif not all(sent_enough):
-    managed_to_send_mbit = round((sending_rate1+sending_rate2)*8*minimum_payload_size/1000000, 1)
+    managed_to_send_mbit = round((sending_rate1+sending_rate2)*8*args.mtu/1000000, 1)
     print(f'Failed to utilize the link. Tried to send {sum(rates_in_mbit)} Mbit/s but only managed {managed_to_send_mbit} Mbit/s. Aborting')
     break
   # If nothing happened, double the sending rate, to try to saturate the link
