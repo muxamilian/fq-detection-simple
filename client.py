@@ -16,6 +16,7 @@ minimum_payload_size = 1200
 packet_seq_num = '!I'
 pack_byte = 'B'
 seq_num_len = 4
+timestamp_len = 8
 timeout = 5
 
 if args.ipv6:
@@ -38,7 +39,7 @@ while True:
     if len(readable) == 0:
         print('Timeout in client')
         break
-    data, addr = readable[0].recvfrom(seq_num_len)
+    data, addr = readable[0].recvfrom(seq_num_len + timestamp_len)
     sock_num = ports.index(addr[1])
     # Echo back and tell the server from port it came, the lower one or the higher one. 
     # This is encoded in `sock_num`
