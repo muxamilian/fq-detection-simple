@@ -12,7 +12,6 @@ parser.add_argument('-s', '--server-address', default='127.0.0.1')
 parser.add_argument('--ipv6', action='store_true')
 args = parser.parse_args()
 ports = [args.port, args.port+1]
-minimum_payload_size = 1200
 packet_seq_num = '!I'
 pack_byte = 'B'
 seq_num_len = 4
@@ -28,6 +27,8 @@ resolved_server_address = socket.getaddrinfo(args.server_address, args.port, add
 sock = socket.socket(address_family, socket.SOCK_DGRAM)
 # Address of the server and port number
 base_addr = (resolved_server_address[0][4][0], ports[0]+2)
+send_sock = socket.socket(address_family, socket.SOCK_DGRAM)
+send_sock.connect(base_addr)
 
 # Send some kind of handshake
 sock.sendto(struct.pack(packet_seq_num, 0), base_addr)
@@ -43,4 +44,4 @@ while True:
     sock_num = ports.index(addr[1])
     # Echo back and tell the server from port it came, the lower one or the higher one. 
     # This is encoded in `sock_num`
-    sock.sendto(data + struct.pack(pack_byte, sock_num), base_addr)
+    send_sock.send(data + struct.pack(pack_byte, sock_num))

@@ -5,10 +5,10 @@ import socket
 import time
 import sys
 import struct
+from typing import List
 
-socks = []
+socks: List[socket.socket] = []
 seq_nums = []
-remote_addresses = [None] * 2
 seq_len = 4
 timestamp_len = 8
 from_socket_len = 1
@@ -46,11 +46,13 @@ recv_socket.bind(('::', recv_port))
 # Just get an estimate of the RTT
 data, addr = recv_socket.recvfrom(1500)
 initial_addr = addr
+for i in range(2):
+  socks[i].connect(initial_addr)
 if args.debug:
   print('Got connection from', initial_addr, type(initial_addr[0]))
 t1 = time.time()
 ret_msg = struct.pack(pack_seq_num_and_timestamp, 0, time.time())
-socks[0].sendto(ret_msg, addr)
+socks[0].send(ret_msg)
 data, addr = recv_socket.recvfrom(1500)
 initial_rtt = time.time() - t1
 
@@ -65,7 +67,7 @@ next_socket = 0
 port_indices = range(len(ports))
 data_buffer = bytearray(recv_packet_len)
 send_buffer = bytearray(payload_size)
-send_buffer[seq_len:] = padding_sequence
+send_buffer[seq_len+timestamp_len:] = padding_sequence
 # We run as many cycles as necessary to detect fair queuing
 for cycle_num in range(sys.maxsize):
   # Current seq nums at the beginning of the cycle
@@ -102,6 +104,7 @@ for cycle_num in range(sys.maxsize):
         recv_socket.recv_into(data_buffer)
         ack_num, send_timestamp, sock_index = struct.unpack(unpack_ack_and_timestamp_and_sock_index, data_buffer)
         latest_rtts[sock_index] = current_time - send_timestamp
+        assert(sock_index >=0 and sock_index <= 1)
         if ack_num >= seq_nums_beginning[sock_index] and (seq_nums_end is None or ack_num < seq_nums_end[sock_index]):
           if num_acked[sock_index] == 0:
             # First ack received for this subflow
@@ -137,7 +140,8 @@ for cycle_num in range(sys.maxsize):
       time.sleep(next_send_time_delta)
     send_msg = struct.pack(pack_seq_num_and_timestamp, seq_nums[next_socket], time.time())
     send_buffer[:seq_len+timestamp_len] = send_msg
-    socks[next_socket].sendto(send_buffer, addr)
+    # socks[next_socket].sendto(send_buffer, addr)
+    socks[next_socket].send(send_buffer)
     seq_nums[next_socket] += 1
   packets_actually_sent = [seq_nums_end_i-seq_nums_beginning_i for seq_nums_beginning_i, seq_nums_end_i in zip(seq_nums_beginning, seq_nums_end)]
   # Could the link be saturated?
