@@ -138,7 +138,7 @@ for cycle_num in range(sys.maxsize):
       # If we have some time until the next packet should be sent, sleep
       # Otherwise (next_send_time_delta<=0), send immediately
       time.sleep(next_send_time_delta)
-    send_msg = struct.pack(pack_seq_num_and_timestamp, seq_nums[next_socket], time.time())
+    send_msg = struct.pack(pack_seq_num_and_timestamp, seq_nums[next_socket], current_time + max(next_send_time_delta, 0))
     send_buffer[:seq_len+timestamp_len] = send_msg
     # socks[next_socket].sendto(send_buffer, addr)
     socks[next_socket].send(send_buffer)
