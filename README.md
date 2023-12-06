@@ -9,7 +9,7 @@ The test checks whether there is fair queuing when sending data from the server 
 * There's first-come first-served
 * The test was inconclusive because the link could not be saturated (CPU too weak)
 
-[fq-detection-fast](https://github.com/muxamilian/fq-detection-fast) has the exact same functionality but is written in C so it is about 2 times faster than the Python version in this repo. 
+[fq-detection-fast](https://github.com/muxamilian/fq-detection-fast) has the exact same functionality but is written in C so it is about 2 times faster than the Python version in this repo. This means it can detect fair queuing at higher bandwidths. 
 
 # Test suite
 The measurement tool can detect the absence/presence of fair queuing with an accuracy of close to 100% on a range of delays and link capacities. 
