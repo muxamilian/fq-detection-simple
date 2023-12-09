@@ -81,7 +81,7 @@ for delay in (10, 50, 100):
     bw_results.append([])
     delay_results.append([])
     results.append([])
-    for rate in (10, 50):#, 100):
+    for rate in (10, 50, 100):
         bw_results[-1].append([])
         delay_results[-1].append([])
         results[-1].append([])
